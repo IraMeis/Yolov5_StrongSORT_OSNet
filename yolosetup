@@ -1,0 +1,6 @@
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+echo --------- path to project resolved: $SCRIPT_DIR ---------
+pip install -r $SCRIPT_DIR/requirements.txt
+pip install -r $SCRIPT_DIR/yolov5/requirements.txt
+mkdir -p $SCRIPT_DIR/weights
+echo --------- setup completed ---------
