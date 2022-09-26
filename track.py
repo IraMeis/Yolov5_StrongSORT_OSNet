@@ -228,6 +228,8 @@ def run(
                             with open(txt_path + '.txt', 'a') as f:
                                 f.write(('%g ' * 10 + '\n') % (frame_idx + 1, id, bbox_left,  # MOT format
                                                                bbox_top, bbox_w, bbox_h, -1, -1, -1, i))
+                            with open(txt_path + '.eval', 'a') as ff:
+                                ff.write("{0} {1}\n".format(int(id), names[int(cls)]))
 
                         if save_vid or save_crop or show_vid:  # Add bbox to image
                             c = int(cls)  # integer class
@@ -263,8 +265,8 @@ def run(
                         h = int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
                     else:  # stream
                         fps, w, h = 30, im0.shape[1], im0.shape[0]
-                    save_path = str(Path(save_path).with_suffix('.mp4'))  # force *.mp4 suffix on results videos
-                    vid_writer[i] = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
+                    save_path = str(Path(save_path).with_suffix('.webm'))  # force *.webm suffix on results videos
+                    vid_writer[i] = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*"vp80"), fps, (w, h))
                 vid_writer[i].write(im0)
 
             prev_frames[i] = curr_frames[i]
