@@ -3,12 +3,14 @@ Run a Flask REST API exposing one or more YOLOv5s models
 """
 
 import argparse
+import datetime
 import glob
 import os
 import shutil
 import uuid
 from pathlib import Path
 from flask import send_file, Flask, request, jsonify
+from flask_apscheduler import APScheduler
 from flask_cors import CORS, cross_origin
 from flask_api import status
 import track
@@ -27,9 +29,30 @@ temp = ROOT / Path('temp')
 sortPath = ROOT / Path('weights/osnet_x0_25_msmt17.pt')
 yoloPath = ROOT / Path('yolov5')
 evalDir = 'tracks'
+pathsDates = []
 
 DETECTION_URL = "/api/nets/run/<model>"
 EVAL_URL = "/api/nets/eval/<uuid>"
+
+scheduler = APScheduler()
+scheduler.init_app(app)
+
+
+@scheduler.task('interval', id='deleteVideos', minutes=5, misfire_grace_time=300)
+def deleteVideos():
+    for pd in pathsDates:
+        try:
+            if pd[0] == temp:
+                timeSeconds = 600
+            else:
+                timeSeconds = 80
+            if (datetime.datetime.now() - pd[2]).seconds > timeSeconds:
+                shutil.rmtree(pd[1])
+                pathsDates.remove(pd)
+        except FileNotFoundError:
+            pass
+        except Exception as e:
+            print('Failed to delete %s. Reason: %s' % (pd, e))
 
 
 @app.route(DETECTION_URL, methods=["POST"])
@@ -41,9 +64,10 @@ def predict(model):
         while os.path.exists(curDir / curName):
             curName = str(uuid.uuid4())
         vi_file = request.files["video"]
-        os.mkdir(temp / curName)
+        os.makedirs(temp / curName)
         vf = temp / curName / vi_file.filename
         vi_file.save(vf)
+        pathsDates.append((temp, temp / curName, datetime.datetime.now()))
 
         if model in models:
             def internal_parser_args():
@@ -64,6 +88,7 @@ def predict(model):
 
             track.main(internal_parser_args())
             dirExp = curDir / curName
+            pathsDates.append((curDir, dirExp, datetime.datetime.now()))
             delete_dir(temp / curName)
             try:
                 old_file = glob.glob(str(dirExp) + "/*.webm")[0]
@@ -105,6 +130,8 @@ def eval(uuid):
 def delete_dir(path):
     try:
         shutil.rmtree(path)
+    except FileNotFoundError:
+        pass
     except Exception as e:
         print('Failed to delete %s. Reason: %s' % (path, e))
 
@@ -113,5 +140,5 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Flask API exposing YOLOv5 model")
     parser.add_argument("--port", default=5001, type=int, help="port number")
     opt = parser.parse_args()
-
+    scheduler.start()
     app.run(host="0.0.0.0", port=opt.port)
