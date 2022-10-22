@@ -18,11 +18,15 @@ ROOT = FILE.parents[0]  # yolov5 strongsort root directory
 app = Flask(__name__)
 cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
+
 paths = []
 models = ["model1", "model3", "model2", "model4"]
-curDir = 'runs/track'
+
+curDir = ROOT / Path('runs/track')
+temp = ROOT / Path('temp')
+sortPath = ROOT / Path('weights/osnet_x0_25_msmt17.pt')
+yoloPath = ROOT / Path('yolov5')
 evalDir = 'tracks'
-temp = Path("temp")
 
 DETECTION_URL = "/api/nets/run/<model>"
 EVAL_URL = "/api/nets/eval/<uuid>"
@@ -34,36 +38,40 @@ def predict(model):
 
     if request.files.get("video"):
         curName = str(uuid.uuid4())
-        while os.path.exists(ROOT / curDir / curName):
+        while os.path.exists(curDir / curName):
             curName = str(uuid.uuid4())
         vi_file = request.files["video"]
-        os.mkdir(ROOT / temp / curName)
-        vf = ROOT / temp / curName / vi_file.filename
+        os.mkdir(temp / curName)
+        vf = temp / curName / vi_file.filename
         vi_file.save(vf)
 
         if model in models:
             def internal_parser_args():
                 in_parser = argparse.ArgumentParser(description="")
-                in_parser.add_argument('--yolo-weights', nargs='+', type=Path, default=ROOT / Path('yolov5') / Path(model + '.pt'), help='model.pt path(s)')
-                in_parser.add_argument('--strong-sort-weights', type=Path, default=ROOT / 'weights/osnet_x0_25_msmt17.pt')
+                in_parser.add_argument('--yolo-weights', nargs='+', type=Path, default=yoloPath / Path(model + '.pt'),
+                                       help='model.pt path(s)')
+                in_parser.add_argument('--strong-sort-weights', type=Path, default=sortPath)
                 in_parser.add_argument('--source', type=str, default=vf, help='file/dir/URL/glob, 0 for webcam')
                 in_parser.add_argument('--conf-thres', type=float, default=0.5, help='confidence threshold')
                 in_parser.add_argument('--iou-thres', type=float, default=0.5, help='NMS IoU threshold')
                 in_parser.add_argument('--name', default=curName, help='save results to project/name')
-                in_parser.add_argument('--project', default=ROOT / curDir, help='save results to project/name')
+                in_parser.add_argument('--project', default=curDir, help='save results to project/name')
                 # parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
                 in_parser.add_argument('--save-txt', default=True, action='store_true', help='save results to *.txt')
-                in_parser.add_argument('--save-vid', default=True, action='store_true', help='save video tracking results')
+                in_parser.add_argument('--save-vid', default=True, action='store_true', help='save video tracking '
+                                                                                             'results')
                 return in_parser.parse_args()
 
             track.main(internal_parser_args())
-            dirExp = ROOT / curDir / curName
-            delete_dir(ROOT / temp / curName)
-            old_file = glob.glob(str(dirExp) + "/*.webm")[0]
-            new_file = os.path.join(dirExp, curName + ".webm")
-            os.rename(old_file, new_file)
-
-            return send_file(new_file)
+            dirExp = curDir / curName
+            delete_dir(temp / curName)
+            try:
+                old_file = glob.glob(str(dirExp) + "/*.webm")[0]
+                new_file = os.path.join(dirExp, curName + ".webm")
+                os.rename(old_file, new_file)
+                return send_file(new_file)
+            except IndexError:
+                return "NO CONTENT", status.HTTP_204_NO_CONTENT
 
     return "BAD REQUEST", status.HTTP_400_BAD_REQUEST
 
@@ -71,14 +79,14 @@ def predict(model):
 @app.route(EVAL_URL, methods=["GET"])
 @cross_origin()
 def eval(uuid):
-    mainPath = ROOT / curDir / uuid
+    mainPath = curDir / uuid
     d = {}
+    dam_count = {'D00': 0, 'D10': 0, 'D20': 0, 'D40': 0, 'ALL': 0}
     try:
         with open(glob.glob(str(mainPath / evalDir) + "/*.eval")[0]) as f:
             for line in f:
                 (key, val) = line.split()
                 d[int(key)] = val
-        dam_count = {'D00': 0, 'D10': 0, 'D20': 0, 'D40': 0, 'ALL': 0}
         for k, v in d.items():
             try:
                 dam_count[v] += 1
@@ -88,7 +96,7 @@ def eval(uuid):
         return jsonify(dam_count)
 
     except IndexError:
-        return "", status.HTTP_204_NO_CONTENT
+        return jsonify(dam_count)
 
     finally:
         delete_dir(mainPath)
