@@ -8,6 +8,7 @@ import glob
 import os
 import shutil
 import uuid
+from logging.config import fileConfig
 from pathlib import Path
 from flask import send_file, Flask, request, jsonify
 from flask_apscheduler import APScheduler
@@ -37,6 +38,8 @@ EVAL_URL = "/api/nets/eval/<uuid>"
 scheduler = APScheduler()
 scheduler.init_app(app)
 
+fileConfig('logging.cfg')
+
 
 @scheduler.task('interval', id='deleteVideos', minutes=5, misfire_grace_time=300)
 def deleteVideos():
@@ -50,7 +53,7 @@ def deleteVideos():
                 shutil.rmtree(pd[1])
                 pathsDates.remove(pd)
         except FileNotFoundError:
-            pass
+            pathsDates.remove(pd)
         except Exception as e:
             print('Failed to delete %s. Reason: %s' % (pd, e))
 
@@ -116,7 +119,8 @@ def eval(uuid):
             try:
                 dam_count[v] += 1
                 dam_count['ALL'] += 1
-            except KeyError:
+            except KeyError as e:
+                app.logger.error('Unexpected predictions. %s' % e)
                 return "", status.HTTP_406_NOT_ACCEPTABLE
         return jsonify(dam_count)
 
