@@ -32,8 +32,8 @@ yoloPath = ROOT / Path('yolov5')
 evalDir = 'tracks'
 pathsDates = []
 
-DETECTION_URL = "/api/nets/run/<model>"
-EVAL_URL = "/api/nets/eval/<uuid>"
+DETECTION_URL = "/api/video/run/<model>"
+EVAL_URL = "/api/video/eval/<uuid>"
 
 scheduler = APScheduler()
 scheduler.init_app(app)
