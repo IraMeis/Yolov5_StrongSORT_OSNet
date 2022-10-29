@@ -61,7 +61,6 @@ def deleteVideos():
 @app.route(DETECTION_URL, methods=["POST"])
 @cross_origin(expose_headers=['Content-Disposition'])
 def predict(model):
-
     if request.files.get("video"):
         curName = str(uuid.uuid4())
         while os.path.exists(curDir / curName):
@@ -73,23 +72,15 @@ def predict(model):
         pathsDates.append((temp, temp / curName, datetime.datetime.now()))
 
         if model in models:
-            def internal_parser_args():
-                in_parser = argparse.ArgumentParser(description="")
-                in_parser.add_argument('--yolo-weights', nargs='+', type=Path, default=yoloPath / Path(model + '.pt'),
-                                       help='model.pt path(s)')
-                in_parser.add_argument('--strong-sort-weights', type=Path, default=sortPath)
-                in_parser.add_argument('--source', type=str, default=vf, help='file/dir/URL/glob, 0 for webcam')
-                in_parser.add_argument('--conf-thres', type=float, default=0.5, help='confidence threshold')
-                in_parser.add_argument('--iou-thres', type=float, default=0.5, help='NMS IoU threshold')
-                in_parser.add_argument('--name', default=curName, help='save results to project/name')
-                in_parser.add_argument('--project', default=curDir, help='save results to project/name')
-                # parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
-                in_parser.add_argument('--save-txt', default=True, action='store_true', help='save results to *.txt')
-                in_parser.add_argument('--save-vid', default=True, action='store_true', help='save video tracking '
-                                                                                             'results')
-                return in_parser.parse_args()
-
-            track.main(internal_parser_args())
+            track.run(yolo_weights=yoloPath / Path(model + '.pt'),
+                      strong_sort_weights=sortPath,
+                      source=vf,
+                      name=curName,
+                      project=curDir,
+                      save_txt=True,
+                      save_vid=True,
+                      conf_thres=0.5,
+                      iou_thres=0.5)
             dirExp = curDir / curName
             pathsDates.append((curDir, dirExp, datetime.datetime.now()))
             delete_dir(temp / curName)
@@ -146,3 +137,5 @@ if __name__ == "__main__":
     opt = parser.parse_args()
     scheduler.start()
     app.run(host="0.0.0.0", port=opt.port)
+else:
+    scheduler.start()

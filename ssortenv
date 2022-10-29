@@ -1,0 +1,6 @@
+python -m venv y5venv
+source y5venv/bin/activate
+pip install gunicorn
+./yolosetup
+deactivate
+
