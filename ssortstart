@@ -1,3 +1,4 @@
+#!/bin/bash
 source y5venv/bin/activate
 gunicorn --bind 0.0.0.0:5001 backvideo:app --daemon
 deactivate
