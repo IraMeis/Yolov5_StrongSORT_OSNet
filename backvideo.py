@@ -85,8 +85,8 @@ def predict(model):
             pathsDates.append((curDir, dirExp, datetime.datetime.now()))
             delete_dir(temp / curName)
             try:
-                old_file = glob.glob(str(dirExp) + "/*.mp4")[0]
-                new_file = os.path.join(dirExp, curName + ".mp4")
+                old_file = glob.glob(str(dirExp) + '/*' + track.OUTPUT_FORMAT)[0]
+                new_file = os.path.join(dirExp, curName + track.OUTPUT_FORMAT)
                 os.rename(old_file, new_file)
                 return send_file(new_file)
             except IndexError:
