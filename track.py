@@ -1,4 +1,5 @@
 import argparse
+import gc
 
 import os
 # limit the number of cpus used by high performance libraries
@@ -279,6 +280,10 @@ def run(
         LOGGER.info(f"Results saved to {colorstr('bold', save_dir)}{s}")
     if update:
         strip_optimizer(yolo_weights)  # update model (to fix SourceChangeWarning)
+    # clearing
+    del model
+    gc.collect()
+    torch.cuda.empty_cache()
 
 
 def parse_opt():
