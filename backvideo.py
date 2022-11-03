@@ -78,15 +78,15 @@ def predict(model):
                       name=curName,
                       project=curDir,
                       save_txt=True,
-                      save_vid=True,
+                      save_gif=True,
                       conf_thres=0.25,
                       iou_thres=0.45)
             dirExp = curDir / curName
             pathsDates.append((curDir, dirExp, datetime.datetime.now()))
             delete_dir(temp / curName)
             try:
-                old_file = glob.glob(str(dirExp) + '/*' + track.OUTPUT_FORMAT)[0]
-                new_file = os.path.join(dirExp, curName + track.OUTPUT_FORMAT)
+                old_file = glob.glob(str(dirExp) + '/*.gif')[0]
+                new_file = os.path.join(dirExp, curName + '.gif')
                 os.rename(old_file, new_file)
                 return send_file(new_file)
             except IndexError:

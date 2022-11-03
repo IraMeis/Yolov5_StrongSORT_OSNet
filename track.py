@@ -1,6 +1,6 @@
 import argparse
 import gc
-
+import imageio
 import os
 # limit the number of cpus used by high performance libraries
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -58,6 +58,7 @@ def run(
         save_conf=False,  # save confidences in --save-txt labels
         save_crop=False,  # save cropped prediction boxes
         save_vid=False,  # save confidences in --save-txt labels
+        save_gif=False,
         nosave=False,  # do not save images/videos
         classes=None,  # filter by class: --class 0, or --class 0 2 3
         agnostic_nms=False,  # class-agnostic NMS
@@ -114,6 +115,9 @@ def run(
         dataset = LoadImages(source, img_size=imgsz, stride=stride, auto=pt)
         nr_sources = 1
     vid_path, vid_writer, txt_path = [None] * nr_sources, [None] * nr_sources, [None] * nr_sources
+
+    if save_gif:
+        writerGIF = imageio.get_writer(save_dir / 'movie.gif', mode='I')
 
     # initialize StrongSORT
     cfg = get_config()
@@ -234,7 +238,7 @@ def run(
                             with open(txt_path + '.eval', 'a') as ff:
                                 ff.write("{0} {1}\n".format(int(id), names[int(cls)]))
 
-                        if save_vid or save_crop or show_vid:  # Add bbox to image
+                        if save_vid or save_crop or show_vid or save_gif:  # Add bbox to image
                             c = int(cls)  # integer class
                             id = int(id)  # integer id
                             label = None if hide_labels else (f'{id} {names[c]}' if hide_conf else \
@@ -272,6 +276,9 @@ def run(
                     vid_writer[i] = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
                 vid_writer[i].write(im0)
 
+            if save_gif:
+                writerGIF.append_data(cv2.cvtColor(im0, cv2.COLOR_BGR2RGB))
+
             prev_frames[i] = curr_frames[i]
 
     # Print results
@@ -282,6 +289,9 @@ def run(
         LOGGER.info(f"Results saved to {colorstr('bold', save_dir)}{s}")
     if update:
         strip_optimizer(yolo_weights)  # update model (to fix SourceChangeWarning)
+
+    if save_gif:
+        writerGIF.close()
     # clearing
     del model
     gc.collect()
@@ -304,6 +314,7 @@ def parse_opt():
     parser.add_argument('--save-conf', action='store_true', help='save confidences in --save-txt labels')
     parser.add_argument('--save-crop', action='store_true', help='save cropped prediction boxes')
     parser.add_argument('--save-vid', action='store_true', help='save video tracking results')
+    parser.add_argument('--save-gif', action='store_true', help='save gif tracking results')
     parser.add_argument('--nosave', action='store_true', help='do not save images/videos')
     # class 0 is person, 1 is bycicle, 2 is car... 79 is oven
     parser.add_argument('--classes', nargs='+', type=int, help='filter by class: --classes 0, or --classes 0 2 3')
