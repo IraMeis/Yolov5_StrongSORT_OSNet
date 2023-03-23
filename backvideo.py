@@ -88,7 +88,7 @@ def predict(model):
                 old_file = glob.glob(str(dirExp) + '/*' + track.OUTPUT_FORMAT)[0]
                 new_file = os.path.join(dirExp, curName + track.OUTPUT_FORMAT)
                 os.rename(old_file, new_file)
-                return send_file(new_file)
+                return send_file(new_file, as_attachment=True)
             except IndexError:
                 return "NO CONTENT", status.HTTP_204_NO_CONTENT
 
